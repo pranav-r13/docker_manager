@@ -42,10 +42,17 @@ def get_system_stats():
         bytes_sent_sec = (net2.bytes_sent - net1.bytes_sent) / 0.1
         bytes_recv_sec = (net2.bytes_recv - net1.bytes_recv) / 0.1
 
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+
         return {
             'cpu': psutil.cpu_percent(interval=None),
-            'ram': psutil.virtual_memory().percent,
-            'disk': psutil.disk_usage('/').percent,
+            'ram': mem.percent,
+            'ram_used': mem.used / (1024**3), # GB
+            'ram_total': mem.total / (1024**3), # GB
+            'disk': disk.percent,
+            'disk_used': disk.used / (1024**3), # GB
+            'disk_total': disk.total / (1024**3), # GB
             'net_in': bytes_recv_sec / 1024, # KB/s
             'net_out': bytes_sent_sec / 1024 # KB/s
         }

@@ -392,16 +392,18 @@
 
         // System Stats Update (Includes RabbitMQ)
         socket.on('system_stats', (data) => {
-            // CPU
+            // CPU (Just % for now)
             document.getElementById('cpu-val').innerText = data.cpu + '%';
             document.getElementById('cpu-bar').style.width = data.cpu + '%';
 
             // RAM
-            document.getElementById('ram-val').innerText = data.ram + '%';
+            const ramText = `${data.ram}% <small class="text-muted ms-1">(${data.ram_used.toFixed(1)}GB / ${data.ram_total.toFixed(1)}GB)</small>`;
+            document.getElementById('ram-val').innerHTML = ramText;
             document.getElementById('ram-bar').style.width = data.ram + '%';
 
             // Disk
-            document.getElementById('disk-val').innerText = data.disk + '%';
+            const diskText = `${data.disk}% <small class="text-muted ms-1">(${data.disk_used.toFixed(1)}GB / ${data.disk_total.toFixed(1)}GB)</small>`;
+            document.getElementById('disk-val').innerHTML = diskText;
             document.getElementById('disk-bar').style.width = data.disk + '%';
 
             // Net
