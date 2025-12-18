@@ -149,6 +149,21 @@ def get_docker_status_update():
             print(f"Scan Error: {e}")
     return status_update
 
+def scan_connectors():
+    """Calculates the list of available connectors and their config status."""
+    connectors = []
+    if os.path.isdir(CONNECTORS_DIR):
+        try:
+            for name in os.listdir(CONNECTORS_DIR):
+                path = os.path.join(CONNECTORS_DIR, name)
+                if os.path.isdir(path):
+                     has_config = 'docker-compose.yml' in os.listdir(path) or 'docker-compose.yaml' in os.listdir(path)
+                     connectors.append({'name': name, 'has_config': has_config})
+        except Exception as e:
+            print(f"Scan Error: {e}")
+    connectors.sort(key=lambda x: x['name'])
+    return connectors
+
 def background_monitor():
     """Emits system stats and container status periodically."""
     # Counter to run docker checks less frequently than system stats
@@ -170,6 +185,10 @@ def background_monitor():
             
             container_list = get_running_containers()
             socketio.emit('container_list', container_list)
+            
+            # 3. Known Connectors list (Dynamic Discovery)
+            connector_list = scan_connectors()
+            socketio.emit('known_connectors', connector_list)
         
         tick += 1
         socketio.sleep(2)

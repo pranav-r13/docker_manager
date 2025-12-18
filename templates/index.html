@@ -225,60 +225,9 @@
                         <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-secondary float-end"
                                 onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
                         <div class="row g-3" id="connectors-list">
-                            {% for connector in connectors %}
-                            <div class="col-12">
-                                <div class="card border-secondary">
-                                    <div class="card-body d-flex justify-content-between align-items-center py-2">
-                                        <div class="d-flex align-items-center">
-                                            <button class="btn btn-sm btn-link text-light text-decoration-none p-0 me-2"
-                                                type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#collapseConfig{{ loop.index }}" aria-expanded="false"
-                                                aria-controls="collapseConfig{{ loop.index }}"
-                                                onclick="loadConfig('{{ connector }}', '{{ loop.index }}')">
-                                                <i class="bi bi-chevron-right" id="arrow-{{ loop.index }}"></i>
-                                            </button>
-                                            <i class="bi bi-plug-fill text-info me-2"></i>
-                                            <strong>{{ connector }}</strong>
-                                            <span id="status-connector_{{ connector }}" class="badge bg-secondary ms-2"
-                                                style="font-size: 0.7em;">Checking...</span>
-                                        </div>
-                                        <div>
-                                            <button class="btn btn-sm btn-outline-success me-1"
-                                                onclick="sendAction('connector', 'up', '{{ connector }}')">Start</button>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                onclick="sendAction('connector', 'down', '{{ connector }}')">Stop</button>
-                                        </div>
-                                    </div>
-                                    <!-- Config Editor Accordion -->
-                                    <div class="collapse" id="collapseConfig{{ loop.index }}">
-                                        <div class="card-footer border-secondary bg-darker">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <small class="text-muted"><i class="bi bi-file-earmark-code"></i>
-                                                    docker-compose.yml</small>
-                                                <div>
-                                                    <button class="btn btn-sm btn-outline-warning"
-                                                        id="btn-lock-{{ loop.index }}"
-                                                        onclick="unlockConfig('{{ loop.index }}', '{{ connector }}')"><i
-                                                            class="bi bi-lock-fill"></i> Unlock</button>
-                                                    <button class="btn btn-sm btn-primary d-none"
-                                                        id="btn-save-{{ loop.index }}"
-                                                        onclick="saveConfig('{{ connector }}', '{{ loop.index }}')"><i
-                                                            class="bi bi-save"></i> Save</button>
-                                                </div>
-                                            </div>
-                                            <textarea class="form-control font-monospace mb-2"
-                                                id="editor-{{ loop.index }}" rows="10"
-                                                style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em;"
-                                                readonly></textarea>
-                                            <div id="editor-msg-{{ loop.index }}" class="text-danger small"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="col-12 text-center text-muted p-3">No connectors found in {{
-                                connectors_dir_display }}</div>
-                            {% endfor %}
+                            <!-- Populated dynamically via Socket.IO -->
+                            <div class="col-12 text-center text-muted p-3" id="connectors-loading">Scanning for
+                                connectors...</div>
                         </div>
                     </div>
 
@@ -637,7 +586,111 @@
                     msgEl.innerText = 'Network error during save';
                 });
         }
-    </script>
-</body>
 
-</html>
+        // --- Dynamic Connector Discovery ---
+        socket.on('known_connectors', (list) => {
+            const container = document.getElementById('connectors-list');
+            const loading = document.getElementById('connectors-loading');
+            if (loading) loading.remove();
+
+            // list: [{name: 'foo', has_config: true}, ...]
+
+            // 1. Mark all existing cards
+            const existingNames = new Set();
+            const cards = container.querySelectorAll('.connector-card-col');
+            cards.forEach(card => {
+                existingNames.add(card.getAttribute('data-name'));
+            });
+
+            // 2. Add New Cards
+            list.forEach((item, index) => {
+                if (!existingNames.has(item.name)) {
+                    // Create new
+                    const uid = item.name.replace(/[^a-zA-Z0-9]/g, '_'); // Safe ID
+                    const html = createConnectorHtml(item.name, item.has_config, uid);
+                    container.insertAdjacentHTML('beforeend', html);
+                } else {
+                    // Update validity status if changed? 
+                    // Complex to handle "gaining config" without destroy, maybe just live with refresh for that edge case
+                    // or check text content. For now, we assume simple validity state.
+
+                    // Actually, if it changes from invalid to valid, we DO want to replace UI.
+                    // Let's check attribute.
+                    const existingCard = container.querySelector(`.connector-card-col[data-name="${item.name}"]`);
+                    const wasValid = existingCard.getAttribute('data-valid') === 'true';
+
+                    if (wasValid !== item.has_config) {
+                        // State changed, replace entire card
+                        const uid = item.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        const html = createConnectorHtml(item.name, item.has_config, uid);
+                        existingCard.outerHTML = html;
+                    }
+                }
+            });
+
+            // 3. Remove Deleted Cards
+            const newNames = new Set(list.map(i => i.name));
+            cards.forEach(card => {
+                const n = card.getAttribute('data-name');
+                if (!newNames.has(n)) {
+                    card.remove();
+                }
+            });
+
+            // 4. Handle Empty State
+            if (list.length === 0 && document.getElementById('connectors-list').children.length === 0) {
+                document.getElementById('connectors-list').innerHTML = '<div class="col-12 text-center text-muted p-3">No connectors found.</div>';
+            }
+        });
+
+        function createConnectorHtml(name, hasConfig, uid) {
+            if (!hasConfig) {
+                return `<div class="col-12 connector-card-col" data-name="${name}" data-valid="false">
+                    <div class="card border-secondary text-muted">
+                        <div class="card-body py-2">
+                             <div class="d-flex align-items-center">
+                                <i class="bi bi-folder text-secondary me-2"></i> 
+                                <strong>${name}</strong>
+                                <span class="badge bg-danger ms-2" style="font-size: 0.7em;">No docker-compose found</span>
+                            </div>
+                        </div>
+                    </div>
+                 </div>`;
+            }
+
+            return `<div class="col-12 connector-card-col" data-name="${name}" data-valid="true">
+                <div class="card border-secondary">
+                    <div class="card-body d-flex justify-content-between align-items-center py-2">
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-link text-light text-decoration-none p-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig${uid}" aria-expanded="false" aria-controls="collapseConfig${uid}" onclick="loadConfig('${name}', '${uid}')">
+                                <i class="bi bi-chevron-right" id="arrow-${uid}"></i>
+                            </button>
+                            <i class="bi bi-plug-fill text-info me-2"></i> 
+                            <strong>${name}</strong>
+                            <span id="status-connector_${name}" class="badge bg-secondary ms-2" style="font-size: 0.7em;">Checking...</span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success me-1" onclick="sendAction('connector', 'up', '${name}')">Start</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="sendAction('connector', 'down', '${name}')">Stop</button>
+                        </div>
+                    </div>
+                    <!-- Config Editor Accordion -->
+                    <div class="collapse" id="collapseConfig${uid}">
+                        <div class="card-footer border-secondary bg-darker">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted"><i class="bi bi-file-earmark-code"></i> docker-compose.yml</small>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-warning" id="btn-lock-${uid}" onclick="unlockConfig('${uid}', '${name}')"><i class="bi bi-lock-fill"></i> Unlock</button>
+                                    <button class="btn btn-sm btn-primary d-none" id="btn-save-${uid}" onclick="saveConfig('${name}', '${uid}')"><i class="bi bi-save"></i> Save</button>
+                                </div>
+                            </div>
+                            <textarea class="form-control font-monospace mb-2" id="editor-${uid}" rows="10" style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em;" readonly></textarea>
+                            <div id="editor-msg-${uid}" class="text-danger small"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+</body >
+
+</html >
