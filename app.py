@@ -9,8 +9,8 @@ from flask_socketio import SocketIO, emit
 
 # Configuration
 app = Flask(__name__)
-# Enable cors_allowed_origins='*' for development flexibility, though not strictly needed for same-origin serving
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
+# Enable cors_allowed_origins='*' for development flexibility
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 # Global background thread control
 monitor_thread = None

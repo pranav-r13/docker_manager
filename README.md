@@ -12,7 +12,7 @@ A Python Flask-based web interface for managing OpenCTI Docker deployments and m
 
 ## Prerequisites
 
-- **Python 3.x**
+- **Python 3.x** (Tested generic, specific async libraries like `eventlet` removed for compatibility)
 - **Docker & Docker Compose** installed and accessible via command line.
 - **Directory Structure**:
     The application assumes the following directory structure on the host:
