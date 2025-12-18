@@ -1,4 +1,4 @@
-# OpenCTI Manager GUI
+# OpenCTI Manager
 
 A Python Flask-based web interface for managing OpenCTI Docker deployments and monitoring system health in real-time.
 
