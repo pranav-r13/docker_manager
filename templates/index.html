@@ -222,7 +222,7 @@
                         </div>
 
                         <!-- Connectors -->
-                        <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-primary float-end"
+                        <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-info float-end"
                                 onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
                         <div class="row g-3" id="connectors-list">
                             <!-- Populated dynamically via Socket.IO -->
@@ -672,7 +672,7 @@
                             <span id="status-connector_${name}" class="badge bg-secondary ms-2" style="font-size: 0.7em;">Checking...</span>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-outline-success me-1" onclick="sendAction('connector', 'up', '${name}')">Start</button>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="sendAction('connector', 'up', '${name}')">Start</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="sendAction('connector', 'down', '${name}')">Stop</button>
                         </div>
                     </div>
