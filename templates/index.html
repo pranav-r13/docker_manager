@@ -51,22 +51,22 @@
             background-color: #da3633;
         }
 
-        /* Custom scrollbar for terminal */
-        .terminal-window::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        .terminal-window::-webkit-scrollbar-track {
-            background: #0d1117;
-        }
-
-        .terminal-window::-webkit-scrollbar-thumb {
-            background: #30363d;
-            border-radius: 5px;
+        .status-warning {
+            background-color: #dbab09;
         }
 
         .progress {
             background-color: #374151;
+        }
+
+        .nav-tabs .nav-link {
+            color: #d1d5db;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: #212529;
+            color: #fff;
+            border-color: #dee2e6 #dee2e6 #212529;
         }
     </style>
 </head>
@@ -83,157 +83,201 @@
             </div>
         </div>
 
-        <!-- System Stats -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card p-3">
-                    <label>CPU Usage <span id="cpu-val" class="float-end">0%</span></label>
-                    <div class="progress mt-2" style="height: 10px;">
-                        <div id="cpu-bar" class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card p-3">
-                    <label>RAM Usage <span id="ram-val" class="float-end">0%</span></label>
-                    <div class="progress mt-2" style="height: 10px;">
-                        <div id="ram-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card p-3">
-                    <label>Disk Usage <span id="disk-val" class="float-end">0%</span></label>
-                    <div class="progress mt-2" style="height: 10px;">
-                        <div id="disk-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card p-3">
-                    <label>Network Sent/Recv</label>
-                    <div class="d-flex justify-content-between mt-1">
-                        <small class="text-muted">Down: <span id="net-in">0</span> KB/s</small>
-                        <small class="text-muted">Up: <span id="net-out">0</span> KB/s</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Main Navigation Tabs -->
+        <ul class="nav nav-tabs mb-3" id="mainTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-pane"
+                    type="button" role="tab" aria-selected="true"><i class="bi bi-speedometer2"></i> Dashboard</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="controls-tab" data-bs-toggle="tab" data-bs-target="#controls-pane"
+                    type="button" role="tab" aria-selected="false"><i class="bi bi-sliders"></i> Platform
+                    Controls</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="containers-tab" data-bs-toggle="tab" data-bs-target="#containers-pane"
+                    type="button" role="tab" aria-selected="false"><i class="bi bi-box-seam"></i> Running
+                    Containers</button>
+            </li>
+        </ul>
 
-        <div class="row">
-            <!-- Control Panel -->
-            <div class="col-md-6">
-                <h4 class="mb-3">Deployment Management</h4>
+        <div class="tab-content" id="mainTabContent">
 
-                <!-- Core Platform -->
-                <div class="card mb-3">
-                    <div
-                        class="card-header fw-bold text-uppercase text-light border-secondary d-flex justify-content-between">
-                        <span><i class="bi bi-hdd-stack"></i> Core Platform</span>
-                        <span id="status-core" class="badge bg-secondary">Checking...</span>
-                    </div>
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>~/opencti/docker</strong>
-                            <div class="text-muted small mt-1">Main OpenCTI Stack</div>
-                        </div>
-                        <div>
-                            <button class="btn btn-success me-2" onclick="sendAction('core', 'up')"><i
-                                    class="bi bi-play-fill"></i> Start</button>
-                            <button class="btn btn-danger" onclick="sendAction('core', 'down')"><i
-                                    class="bi bi-stop-fill"></i> Stop</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Connectors -->
-                <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-secondary float-end"
-                        onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
-                <div class="row g-3" id="connectors-list">
-                    <!-- Connectors will be loaded here by backend -->
-                    {% for connector in connectors %}
-                    <div class="col-12">
-                        <div class="card border-secondary">
-                            <div class="card-body d-flex justify-content-between align-items-center py-2">
-                                <div>
-                                    <i class="bi bi-plug-fill text-info me-2"></i>
-                                    <strong>{{ connector }}</strong>
-                                    <span id="status-connector_{{ connector }}" class="badge bg-secondary ms-2"
-                                        style="font-size: 0.7em;">Checking...</span>
-                                </div>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-success me-1"
-                                        onclick="sendAction('connector', 'up', '{{ connector }}')">Start</button>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                        onclick="sendAction('connector', 'down', '{{ connector }}')">Stop</button>
+            <!-- DASHBOARD TAB -->
+            <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
+                <!-- System Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <label>CPU Usage <span id="cpu-val" class="float-end">0%</span></label>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div id="cpu-bar" class="progress-bar bg-danger" role="progressbar" style="width: 0%">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="col-12 text-center text-muted p-3">No connectors found in {{ connectors_dir_display }}
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <label>RAM Usage <span id="ram-val" class="float-end">0%</span></label>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div id="ram-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%">
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    {% endfor %}
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <label>Disk Usage <span id="disk-val" class="float-end">0%</span></label>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div id="disk-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <label>Network Sent/Recv</label>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted">Down: <span id="net-in">0</span> KB/s</small>
+                                <small class="text-muted">Up: <span id="net-out">0</span> KB/s</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RabbitMQ Stats -->
+                <h4 class="mb-3 text-warning"><i class="bi bi-envelope-paper"></i> RabbitMQ Metrics</h4>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            <h3 id="mq-status" class="mb-0"><span class="badge bg-secondary">Unknown</span></h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted mb-2">Bundles Queueud</h6>
+                            <h3 id="mq-queued" class="text-light mb-0">0</h3>
+                            <small class="text-muted">Messages Ready</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted mb-2">Bundles Processed/Total</h6>
+                            <h3 id="mq-total" class="text-light mb-0">0</h3>
+                            <small class="text-muted">Total Messages</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <h6 class="text-muted mb-2">Rate (In / Out)</h6>
+                            <div class="mb-0">
+                                <div><span class="text-success" id="mq-rate-in">0.0</span> <small>/s In</small></div>
+                                <div><span class="text-info" id="mq-rate-out">0.0</span> <small>/s Out</small></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Terminal Output -->
-            <div class="col-md-6">
-                <h4 class="mb-3">Live Log Console <small class="text-muted fs-6 fw-normal">(Streams Output)</small></h4>
-                <div id="terminal" class="terminal-window">
-                    <div class="text-muted">// Ready for commands...</div>
+            <!-- CONTROLS TAB -->
+            <div class="tab-pane fade" id="controls-pane" role="tabpanel">
+                <div class="row">
+                    <!-- Control Panel -->
+                    <div class="col-md-6">
+                        <h4 class="mb-3">Deployment Management</h4>
+
+                        <!-- Core Platform -->
+                        <div class="card mb-3">
+                            <div
+                                class="card-header fw-bold text-uppercase text-light border-secondary d-flex justify-content-between">
+                                <span><i class="bi bi-hdd-stack"></i> Core Platform</span>
+                                <span id="status-core" class="badge bg-secondary">Checking...</span>
+                            </div>
+                            <div class="card-body d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>~/opencti/docker</strong>
+                                    <div class="text-muted small mt-1">Main OpenCTI Stack</div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-success me-2" onclick="sendAction('core', 'up')"><i
+                                            class="bi bi-play-fill"></i> Start</button>
+                                    <button class="btn btn-danger" onclick="sendAction('core', 'down')"><i
+                                            class="bi bi-stop-fill"></i> Stop</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connectors -->
+                        <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-secondary float-end"
+                                onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
+                        <div class="row g-3" id="connectors-list">
+                            {% for connector in connectors %}
+                            <div class="col-12">
+                                <div class="card border-secondary">
+                                    <div class="card-body d-flex justify-content-between align-items-center py-2">
+                                        <div>
+                                            <i class="bi bi-plug-fill text-info me-2"></i>
+                                            <strong>{{ connector }}</strong>
+                                            <span id="status-connector_{{ connector }}" class="badge bg-secondary ms-2"
+                                                style="font-size: 0.7em;">Checking...</span>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-success me-1"
+                                                onclick="sendAction('connector', 'up', '{{ connector }}')">Start</button>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                onclick="sendAction('connector', 'down', '{{ connector }}')">Stop</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="col-12 text-center text-muted p-3">No connectors found in {{
+                                connectors_dir_display }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Terminal Output (Shared for Controls) -->
+                    <div class="col-md-6">
+                        <h4 class="mb-3">Live Log Console <small class="text-muted fs-6 fw-normal">(Streams
+                                Output)</small></h4>
+                        <div id="terminal" class="terminal-window">
+                            <div class="text-muted">// Ready for commands...</div>
+                        </div>
+                        <div class="mt-2 text-end">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearTerminal()">Clear
+                                Console</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="mt-2 text-end">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="clearTerminal()">Clear Console</button>
+            </div>
+
+            <!-- RUNNING CONTAINERS TAB -->
+            <div class="tab-pane fade" id="containers-pane" role="tabpanel">
+                <h4 class="mb-3">Live Container List</h4>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Image</th>
+                                <th>Status</th>
+                                <th>Uptime</th>
+                            </tr>
+                        </thead>
+                        <tbody id="containers-table-body">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Waiting for updates...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    </div>
 
-    <!-- Running Containers Tab / Section -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab"
-                        data-bs-target="#dashboard-pane" type="button" role="tab"
-                        aria-selected="true">Dashboard</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="containers-tab" data-bs-toggle="tab" data-bs-target="#containers-pane"
-                        type="button" role="tab" aria-selected="false">Running Containers (Live)</button>
-                </li>
-            </ul>
-            <div class="tab-content border border-top-0 p-3 bg-dark" id="myTabContent">
-                <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
-                    <div class="text-muted small mb-2"><i class="bi bi-info-circle"></i> Use the controls above to
-                        manage specific stacks.</div>
-                </div>
-                <div class="tab-pane fade" id="containers-pane" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Image</th>
-                                    <th>Status</th>
-                                    <th>Uptime</th>
-                                </tr>
-                            </thead>
-                            <tbody id="containers-table-body">
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">Waiting for updates...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
     <!-- Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
@@ -259,7 +303,7 @@
             logToTerminal('System: Connection lost.');
         });
 
-        // System Stats Update
+        // System Stats Update (Includes RabbitMQ)
         socket.on('system_stats', (data) => {
             // CPU
             document.getElementById('cpu-val').innerText = data.cpu + '%';
@@ -276,11 +320,26 @@
             // Net
             document.getElementById('net-in').innerText = data.net_in.toFixed(1);
             document.getElementById('net-out').innerText = data.net_out.toFixed(1);
+
+            // RabbitMQ
+            if (data.rabbitmq) {
+                const mq = data.rabbitmq;
+                const mqStatusEl = document.getElementById('mq-status');
+
+                if (mq.status === 'online') {
+                    mqStatusEl.innerHTML = '<span class="badge bg-success">Online</span>';
+                    document.getElementById('mq-queued').innerText = mq.messages_ready.toLocaleString();
+                    document.getElementById('mq-total').innerText = mq.messages_total.toLocaleString();
+                    document.getElementById('mq-rate-in').innerText = mq.publish_rate.toFixed(1);
+                    document.getElementById('mq-rate-out').innerText = mq.deliver_rate.toFixed(1);
+                } else {
+                    mqStatusEl.innerHTML = `<span class="badge bg-danger">Offline (${mq.error || 'Err'})</span>`;
+                }
+            }
         });
 
-        // Container Status Update
+        // Container Status Update (Badges in Controls Tab)
         socket.on('status_update', (data) => {
-            // data: { 'core': 'running'|'stopped', 'connector_X': 'running'|'stopped' }
             for (const [key, status] of Object.entries(data)) {
                 const el = document.getElementById(`status-${key}`);
                 if (el) {
@@ -294,7 +353,6 @@
                 }
             }
         });
-
 
         // Running Containers List Update
         socket.on('container_list', (data) => {

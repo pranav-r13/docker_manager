@@ -7,10 +7,16 @@ import psutil
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
+import requests
+
 # Configuration
 app = Flask(__name__)
 # Enable cors_allowed_origins='*' for development flexibility
 socketio = SocketIO(app, cors_allowed_origins='*')
+
+# RabbitMQ Defaults
+RABBITMQ_URL = "http://192.168.0.205:15672/api/overview"
+RABBITMQ_AUTH = ('admin', 'Admin@123')
 
 # Global background thread control
 monitor_thread = None
@@ -47,6 +53,28 @@ def get_system_stats():
         print(f"Error getting system stats: {e}")
         return {'cpu':0, 'ram':0, 'disk':0, 'net_in':0, 'net_out':0}
 
+def get_rabbitmq_stats():
+    """Fetches metrics from RabbitMQ Management API."""
+    try:
+        # /api/overview gives cluster-wide message rates and total queue stats
+        resp = requests.get(RABBITMQ_URL, auth=RABBITMQ_AUTH, timeout=2)
+        if resp.status_code == 200:
+            data = resp.json()
+            queue_totals = data.get('queue_totals', {})
+            message_stats = data.get('message_stats', {})
+            
+            return {
+                'status': 'online',
+                'messages_ready': queue_totals.get('messages_ready', 0),
+                'messages_unacknowledged': queue_totals.get('messages_unacknowledged', 0),
+                'messages_total': queue_totals.get('messages', 0),
+                'publish_rate': message_stats.get('publish_details', {}).get('rate', 0.0),
+                'deliver_rate': message_stats.get('deliver_get_details', {}).get('rate', 0.0)
+            }
+        else:
+            return {'status': 'error', 'code': resp.status_code}
+    except Exception as e:
+        return {'status': 'offline', 'error': str(e)}
 
 def check_docker_status(cwd):
     """
@@ -129,6 +157,8 @@ def background_monitor():
         # 1. System Stats (Every 2s)
         try:
             stats = get_system_stats()
+            # Append RabbitMQ stats to system stats
+            stats['rabbitmq'] = get_rabbitmq_stats()
             socketio.emit('system_stats', stats)
         except Exception as e:
             print(f"Stats Error: {e}")
