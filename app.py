@@ -72,6 +72,26 @@ def check_docker_status(cwd):
     except Exception:
         return 'stopped'
 
+
+def get_docker_status_update():
+    """Helper to get full status update dict for all components."""
+    status_update = {}
+    # Check Core
+    status_update['core'] = check_docker_status(DOCKER_DIR)
+    
+    # Check Connectors
+    if os.path.isdir(CONNECTORS_DIR):
+        try:
+            for name in os.listdir(CONNECTORS_DIR):
+                path = os.path.join(CONNECTORS_DIR, name)
+                if os.path.isdir(path):
+                    # Check for yml or yaml
+                    if 'docker-compose.yml' in os.listdir(path) or 'docker-compose.yaml' in os.listdir(path):
+                        status_update[f'connector_{name}'] = check_docker_status(path)
+        except Exception as e:
+            print(f"Scan Error: {e}")
+    return status_update
+
 def background_monitor():
     """Emits system stats and container status periodically."""
     # Counter to run docker checks less frequently than system stats
@@ -86,21 +106,7 @@ def background_monitor():
 
         # 2. Docker Status (Every 4s -> every 2nd tick)
         if tick % 2 == 0:
-            status_update = {}
-            
-            # Check Core
-            status_update['core'] = check_docker_status(DOCKER_DIR)
-            
-            # Check Connectors
-            if os.path.isdir(CONNECTORS_DIR):
-                try:
-                    for name in os.listdir(CONNECTORS_DIR):
-                        path = os.path.join(CONNECTORS_DIR, name)
-                        if os.path.isdir(path) and 'docker-compose.yml' in os.listdir(path):
-                            status_update[f'connector_{name}'] = check_docker_status(path)
-                except Exception as e:
-                    print(f"Scan Error: {e}")
-            
+            status_update = get_docker_status_update()
             socketio.emit('status_update', status_update)
         
         tick += 1
@@ -112,11 +118,13 @@ def index():
     connectors = []
     if os.path.isdir(CONNECTORS_DIR):
         try:
-            # List subdirectories in ~/opencti/connectors that contain docker-compose.yml
+            # List subdirectories in ~/opencti/connectors that contain docker-compose.yml OR .yaml
             for name in os.listdir(CONNECTORS_DIR):
                 path = os.path.join(CONNECTORS_DIR, name)
-                if os.path.isdir(path) and 'docker-compose.yml' in os.listdir(path):
-                    connectors.append(name)
+                if os.path.isdir(path):
+                     files = os.listdir(path)
+                     if 'docker-compose.yml' in files or 'docker-compose.yaml' in files:
+                        connectors.append(name)
         except Exception as e:
             print(f"Error scanning connectors: {e}")
     
@@ -156,9 +164,12 @@ def execute_docker_command(command, cwd):
         else:
             socketio.emit('command_output', {'line': f"FAILURE: Command exited with code {process.returncode}"})
         
-        # Force an immediate status update after command
-        # (Optional, but good UX to see the dot change faster)
-        # We can't easy call background_monitor here, but next tick will catch it.
+        # Force an immediate status update after command completion
+        try:
+            update = get_docker_status_update()
+            socketio.emit('status_update', update)
+        except Exception as e:
+             print(f"Post-command status update failed: {e}")
 
     except Exception as e:
         socketio.emit('command_output', {'line': f"EXCEPTION: {str(e)}"})
@@ -201,6 +212,14 @@ def handle_docker_action(data):
 @socketio.on('connect')
 def handle_connect():
     global monitor_thread
+    
+    # Emit immediate status update for better UX on refresh
+    try:
+        update = get_docker_status_update()
+        emit('status_update', update)
+    except Exception as e:
+        print(f"Connect status check failed: {e}")
+
     with thread_lock:
         if monitor_thread is None:
             monitor_thread = socketio.start_background_task(background_monitor)
@@ -214,4 +233,15 @@ if __name__ == '__main__':
     print(f"Managing Core: {DOCKER_DIR}")
     print(f"Managing Connectors: {CONNECTORS_DIR}")
     
+    # Debug: List visible connectors at startup
+    if os.path.exists(CONNECTORS_DIR):
+        print("Scanned Connectors:")
+        for name in os.listdir(CONNECTORS_DIR):
+            p = os.path.join(CONNECTORS_DIR, name)
+            if os.path.isdir(p):
+                 has_yml = 'docker-compose.yml' in os.listdir(p) or 'docker-compose.yaml' in os.listdir(p)
+                 print(f" - {name}: {'Valid (Found docker-compose)' if has_yml else 'Skipped (No docker-compose.yml/yaml)'}")
+    else:
+        print(f"Warning: Connectors directory not found at {CONNECTORS_DIR}")
+
     socketio.run(app, host='0.0.0.0', port=args.port, debug=True)

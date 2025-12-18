@@ -21,7 +21,7 @@ A Python Flask-based web interface for managing OpenCTI Docker deployments and m
     └── opencti/
         ├── docker/               # Core Platform (docker-compose.yml here)
         └── connectors/           # Connectors Directory
-            ├── connector-A/      # (docker-compose.yml here)
+            ├── connector-A/      # (docker-compose.yml or .yaml here)
             └── connector-B/      # ...
     ```
 
