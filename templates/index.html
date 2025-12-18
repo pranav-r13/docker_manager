@@ -227,7 +227,14 @@
                             <div class="col-12">
                                 <div class="card border-secondary">
                                     <div class="card-body d-flex justify-content-between align-items-center py-2">
-                                        <div>
+                                        <div class="d-flex align-items-center">
+                                            <button class="btn btn-sm btn-link text-light text-decoration-none p-0 me-2"
+                                                type="button" data-bs-toggle="collapse"
+                                                data-bs-target="#collapseConfig{{ loop.index }}" aria-expanded="false"
+                                                aria-controls="collapseConfig{{ loop.index }}"
+                                                onclick="loadConfig('{{ connector }}', '{{ loop.index }}')">
+                                                <i class="bi bi-chevron-right" id="arrow-{{ loop.index }}"></i>
+                                            </button>
                                             <i class="bi bi-plug-fill text-info me-2"></i>
                                             <strong>{{ connector }}</strong>
                                             <span id="status-connector_{{ connector }}" class="badge bg-secondary ms-2"
@@ -238,6 +245,30 @@
                                                 onclick="sendAction('connector', 'up', '{{ connector }}')">Start</button>
                                             <button class="btn btn-sm btn-outline-danger"
                                                 onclick="sendAction('connector', 'down', '{{ connector }}')">Stop</button>
+                                        </div>
+                                    </div>
+                                    <!-- Config Editor Accordion -->
+                                    <div class="collapse" id="collapseConfig{{ loop.index }}">
+                                        <div class="card-footer border-secondary bg-darker">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <small class="text-muted"><i class="bi bi-file-earmark-code"></i>
+                                                    docker-compose.yml</small>
+                                                <div>
+                                                    <button class="btn btn-sm btn-outline-warning"
+                                                        id="btn-lock-{{ loop.index }}"
+                                                        onclick="unlockConfig('{{ loop.index }}', '{{ connector }}')"><i
+                                                            class="bi bi-lock-fill"></i> Unlock</button>
+                                                    <button class="btn btn-sm btn-primary d-none"
+                                                        id="btn-save-{{ loop.index }}"
+                                                        onclick="saveConfig('{{ connector }}', '{{ loop.index }}')"><i
+                                                            class="bi bi-save"></i> Save</button>
+                                                </div>
+                                            </div>
+                                            <textarea class="form-control font-monospace mb-2"
+                                                id="editor-{{ loop.index }}" rows="10"
+                                                style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em;"
+                                                readonly></textarea>
+                                            <div id="editor-msg-{{ loop.index }}" class="text-danger small"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -490,6 +521,97 @@
                 action: action,
                 target_name: targetName
             });
+        }
+        let currentUnlockIndex = null;
+        const passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+
+        function loadConfig(name, index) {
+            const arrow = document.getElementById(`arrow-${index}`);
+            if (arrow.classList.contains('bi-chevron-right')) {
+                arrow.classList.remove('bi-chevron-right');
+                arrow.classList.add('bi-chevron-down');
+
+                // Fetch config
+                fetch(`/api/connector/${name}/config`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.content) {
+                            document.getElementById(`editor-${index}`).value = data.content;
+                        } else {
+                            document.getElementById(`editor-${index}`).value = '// Error loading file';
+                        }
+                    });
+            } else {
+                arrow.classList.remove('bi-chevron-down');
+                arrow.classList.add('bi-chevron-right');
+            }
+        }
+
+        function unlockConfig(index, name) {
+            // Check if Stopped
+            const statusBadge = document.getElementById(`status-connector_${name}`);
+            if (statusBadge && statusBadge.innerText.toLowerCase() === 'running') {
+                alert('You must STOP the connector before editing the configuration.');
+                return;
+            }
+
+            currentUnlockIndex = index;
+            document.getElementById('unlock-password').value = '';
+            document.getElementById('password-error').innerText = '';
+            passwordModal.show();
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('unlock-password').value;
+            if (pwd === 'P@ssw0rd') {
+                passwordModal.hide();
+                // Enable Editor
+                const index = currentUnlockIndex;
+                const editor = document.getElementById(`editor-${index}`);
+                editor.readOnly = false;
+                editor.style.borderColor = '#ffc107'; // Yellow border to indicate edit mode
+
+                // Toggle Buttons
+                document.getElementById(`btn-lock-${index}`).classList.add('d-none');
+                document.getElementById(`btn-save-${index}`).classList.remove('d-none');
+
+            } else {
+                document.getElementById('password-error').innerText = 'Incorrect password.';
+            }
+        }
+
+        function saveConfig(name, index) {
+            const content = document.getElementById(`editor-${index}`).value;
+            const msgEl = document.getElementById(`editor-msg-${index}`);
+
+            msgEl.innerText = 'Saving...';
+
+            fetch(`/api/connector/${name}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        msgEl.className = 'text-success small';
+                        msgEl.innerText = `Saved! Backup created: ${data.backup}`;
+
+                        // Reset UI
+                        document.getElementById(`editor-${index}`).readOnly = true;
+                        document.getElementById(`editor-${index}`).style.borderColor = '';
+                        document.getElementById(`btn-lock-${index}`).classList.remove('d-none');
+                        document.getElementById(`btn-save-${index}`).classList.add('d-none');
+                        document.getElementById(`btn-lock-${index}`).innerHTML = '<i class="bi bi-lock-fill"></i> Unlock'; // Reset text if needed
+                    } else {
+                        msgEl.className = 'text-danger small';
+                        msgEl.innerText = data.error || 'Save failed';
+                    }
+                })
+                .catch(err => {
+                    msgEl.className = 'text-danger small';
+                    msgEl.innerText = 'Network error during save';
+                });
         }
     </script>
 
