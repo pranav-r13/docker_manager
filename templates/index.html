@@ -320,6 +320,28 @@
         </div>
     </div>
 
+    </div>
+
+    <!-- Password Modal -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Enter Password</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="password" id="unlock-password" class="form-control" placeholder="Password">
+                    <div id="password-error" class="text-danger small mt-2"></div>
+                </div>
+                <div class="modal-footer border-secondary p-1">
+                    <button type="button" class="btn btn-sm btn-primary w-100" onclick="checkPassword()">Unlock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <!-- Chart.js -->

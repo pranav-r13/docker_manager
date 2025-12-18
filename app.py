@@ -193,6 +193,73 @@ def index():
     connectors.sort()
     return render_template('index.html', connectors=connectors, connectors_dir_display=CONNECTORS_DIR)
 
+@app.route('/api/connector/<name>/config', methods=['GET'])
+def get_connector_config(name):
+    """Returns the content of the docker-compose file for a connector."""
+    try:
+        path = os.path.join(CONNECTORS_DIR, name)
+        if not os.path.isdir(path):
+            return {'error': 'Connector not found'}, 404
+        
+        # Check for yml or yaml
+        config_file = None
+        if 'docker-compose.yml' in os.listdir(path):
+            config_file = os.path.join(path, 'docker-compose.yml')
+        elif 'docker-compose.yaml' in os.listdir(path):
+            config_file = os.path.join(path, 'docker-compose.yaml')
+            
+        if not config_file:
+            return {'error': 'No docker-compose file found'}, 404
+            
+        with open(config_file, 'r') as f:
+            content = f.read()
+            
+        return {'content': content, 'filename': os.path.basename(config_file)}
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+@app.route('/api/connector/<name>/config', methods=['POST'])
+def save_connector_config(name):
+    """Saves the config file, creating a backup first."""
+    try:
+        path = os.path.join(CONNECTORS_DIR, name)
+        data = request.json
+        new_content = data.get('content')
+        
+        if not os.path.isdir(path):
+            return {'error': 'Connector not found'}, 404
+            
+        # 1. Check Status (Must be STOPPED)
+        status = check_docker_status(path)
+        if status == 'running':
+            return {'error': 'Cannot edit config while connector is running. Please stop it first.'}, 400
+            
+        # 2. Identify File
+        config_file = None
+        if 'docker-compose.yml' in os.listdir(path):
+            config_file = os.path.join(path, 'docker-compose.yml')
+        elif 'docker-compose.yaml' in os.listdir(path):
+            config_file = os.path.join(path, 'docker-compose.yaml')
+            
+        if not config_file:
+            return {'error': 'Original config file not found'}, 404
+
+        # 3. Create Backup
+        backup_file = os.path.join(path, f"docker-compose-old.{config_file.split('.')[-1]}")
+        with open(config_file, 'r') as f:
+            old_content = f.read()
+        with open(backup_file, 'w') as f:
+            f.write(old_content)
+            
+        # 4. Save New Content
+        with open(config_file, 'w') as f:
+            f.write(new_content)
+            
+        return {'status': 'success', 'backup': os.path.basename(backup_file)}
+        
+    except Exception as e:
+        return {'error': str(e)}, 500
+
 def execute_docker_command(command, cwd):
     """
     Executes a shell command in a specific directory.
