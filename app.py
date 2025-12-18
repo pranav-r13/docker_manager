@@ -16,35 +16,36 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 monitor_thread = None
 thread_lock = threading.Lock()
 
-# Paths (Using os.path.expanduser to handle ~)
+# Paths
+# Default to /home/ctiserver if it exists (specific user request), otherwise fallback to ~
+POSSIBLE_HOME = '/home/ctiserver/opencti'
 HOME_DIR = os.path.expanduser('~')
-OPENCTI_DIR = os.path.join(HOME_DIR, 'opencti')
+OPENCTI_DIR = POSSIBLE_HOME if os.path.isdir('/home/ctiserver') else os.path.join(HOME_DIR, 'opencti')
+
 DOCKER_DIR = os.path.join(OPENCTI_DIR, 'docker')
 CONNECTORS_DIR = os.path.join(OPENCTI_DIR, 'connectors')
 
 def get_system_stats():
     """Collects system metrics (CPU, RAM, Disk, Network)."""
-    # Network (bytes per sec calculation needs state, simplifying to total or snapshot)
-    # For a simple 'live' speed, we compare two snapshots. 
-    # Here we will just send totals or raw values, or simple percentage.
-    # Let's do a simple calculation inside the loop if needed, 
-    # but for simplicity in this function we return current snapshots.
-    net1 = psutil.net_io_counters()
-    time.sleep(0.1) # Brief pause to calculate rate if called in loop, 
-                    # but real loop is in background_thread
-    net2 = psutil.net_io_counters()
-    
-    # Bytes per second (approximation over small window)
-    bytes_sent_sec = (net2.bytes_sent - net1.bytes_sent) / 0.1
-    bytes_recv_sec = (net2.bytes_recv - net1.bytes_recv) / 0.1
+    try:
+        net1 = psutil.net_io_counters()
+        time.sleep(0.1) 
+        net2 = psutil.net_io_counters()
+        
+        # Bytes per second (approximation over small window)
+        bytes_sent_sec = (net2.bytes_sent - net1.bytes_sent) / 0.1
+        bytes_recv_sec = (net2.bytes_recv - net1.bytes_recv) / 0.1
 
-    return {
-        'cpu': psutil.cpu_percent(interval=None),
-        'ram': psutil.virtual_memory().percent,
-        'disk': psutil.disk_usage('/').percent,
-        'net_in': bytes_recv_sec / 1024, # KB/s
-        'net_out': bytes_sent_sec / 1024 # KB/s
-    }
+        return {
+            'cpu': psutil.cpu_percent(interval=None),
+            'ram': psutil.virtual_memory().percent,
+            'disk': psutil.disk_usage('/').percent,
+            'net_in': bytes_recv_sec / 1024, # KB/s
+            'net_out': bytes_sent_sec / 1024 # KB/s
+        }
+    except Exception as e:
+        print(f"Error getting system stats: {e}")
+        return {'cpu':0, 'ram':0, 'disk':0, 'net_in':0, 'net_out':0}
 
 
 def check_docker_status(cwd):
@@ -71,6 +72,34 @@ def check_docker_status(cwd):
         return 'stopped'
     except Exception:
         return 'stopped'
+
+def get_running_containers():
+    """
+    Returns a list of all running containers using docker ps.
+    """
+    containers = []
+    try:
+        # Format: ID|Names|Image|Status|RunningFor
+        result = subprocess.run(
+            ['docker', 'ps', '--format', '{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.RunningFor}}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split('\n'):
+                parts = line.split('|')
+                if len(parts) >= 5:
+                    containers.append({
+                        'id': parts[0],
+                        'name': parts[1],
+                        'image': parts[2],
+                        'status': parts[3],
+                        'uptime': parts[4]
+                    })
+    except Exception as e:
+        print(f"Error listing containers: {e}")
+    return containers
 
 
 def get_docker_status_update():
@@ -104,10 +133,13 @@ def background_monitor():
         except Exception as e:
             print(f"Stats Error: {e}")
 
-        # 2. Docker Status (Every 4s -> every 2nd tick)
+        # 2. Docker Status & Container List (Every 4s -> every 2nd tick)
         if tick % 2 == 0:
             status_update = get_docker_status_update()
             socketio.emit('status_update', status_update)
+            
+            container_list = get_running_containers()
+            socketio.emit('container_list', container_list)
         
         tick += 1
         socketio.sleep(2)
@@ -129,7 +161,7 @@ def index():
             print(f"Error scanning connectors: {e}")
     
     connectors.sort()
-    return render_template('index.html', connectors=connectors)
+    return render_template('index.html', connectors=connectors, connectors_dir_display=CONNECTORS_DIR)
 
 def execute_docker_command(command, cwd):
     """
