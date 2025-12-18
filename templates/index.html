@@ -161,6 +161,9 @@
                             <h6 class="text-muted mb-2">Bundles Queueud</h6>
                             <h3 id="mq-queued" class="text-light mb-0">0</h3>
                             <small class="text-muted">Messages Ready</small>
+                            <div style="height: 60px; width: 100%; margin-top: 10px;">
+                                <canvas id="chart-queued"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -168,6 +171,9 @@
                             <h6 class="text-muted mb-2">Bundles Processed/Total</h6>
                             <h3 id="mq-total" class="text-light mb-0">0</h3>
                             <small class="text-muted">Total Messages</small>
+                            <div style="height: 60px; width: 100%; margin-top: 10px;">
+                                <canvas id="chart-total"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -176,6 +182,9 @@
                             <div class="mb-0">
                                 <div><span class="text-success" id="mq-rate-in">0.0</span> <small>/s In</small></div>
                                 <div><span class="text-info" id="mq-rate-out">0.0</span> <small>/s Out</small></div>
+                            </div>
+                            <div style="height: 60px; width: 100%; margin-top: 10px;">
+                                <canvas id="chart-rate"></canvas>
                             </div>
                         </div>
                     </div>
@@ -282,6 +291,8 @@
 
     <!-- Socket.io -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const socket = io();
         const terminal = document.getElementById('terminal');
@@ -289,6 +300,76 @@
             connected: '<span class="status-dot status-online"></span>Connected',
             disconnected: '<span class="status-dot status-offline"></span>Disconnected'
         };
+
+        // --- Chart.js Setup ---
+        const chartConfig = (color) => ({
+            type: 'line',
+            data: {
+                labels: Array(20).fill(''),
+                datasets: [{
+                    data: Array(20).fill(null),
+                    borderColor: color,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false, beginAtZero: true }
+                },
+                animation: false
+            }
+        });
+
+        const multiChartConfig = (color1, color2) => ({
+            type: 'line',
+            data: {
+                labels: Array(20).fill(''),
+                datasets: [
+                    { data: Array(20).fill(null), borderColor: color1, borderWidth: 2, tension: 0.4, pointRadius: 0 },
+                    { data: Array(20).fill(null), borderColor: color2, borderWidth: 2, tension: 0.4, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false, beginAtZero: true }
+                },
+                animation: false
+            }
+        });
+
+        // Initialize Charts
+        const ctxQueued = document.getElementById('chart-queued').getContext('2d');
+        const chartQueued = new Chart(ctxQueued, chartConfig('#d1d5db')); // Light Grey
+
+        const ctxTotal = document.getElementById('chart-total').getContext('2d');
+        const chartTotal = new Chart(ctxTotal, chartConfig('#ffc107')); // Warning/Yellow
+
+        const ctxRate = document.getElementById('chart-rate').getContext('2d');
+        const chartRate = new Chart(ctxRate, multiChartConfig('#198754', '#0dcaf0')); // Success(Green) and Info(Blue)
+
+        function updateChart(chart, val1, val2 = null) {
+            // Shift data
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[0].data.push(val1);
+
+            if (chart.data.datasets.length > 1 && val2 !== null) {
+                chart.data.datasets[1].data.shift();
+                chart.data.datasets[1].data.push(val2);
+            }
+            chart.update();
+        }
+        // ---------------------
 
         // Connection Status
         socket.on('connect', () => {
@@ -334,6 +415,11 @@
                     document.getElementById('mq-total').innerText = mq.messages_total.toLocaleString();
                     document.getElementById('mq-rate-in').innerText = mq.publish_rate.toFixed(1);
                     document.getElementById('mq-rate-out').innerText = mq.deliver_rate.toFixed(1);
+
+                    // Update Graphs
+                    updateChart(chartQueued, mq.messages_ready);
+                    updateChart(chartTotal, mq.messages_total);
+                    updateChart(chartRate, mq.publish_rate, mq.deliver_rate);
                 } else {
                     mqStatusEl.innerHTML = `<span class="badge bg-danger">Offline (${mq.error || 'Err'})</span>`;
                 }
