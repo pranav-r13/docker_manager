@@ -1,0 +1,60 @@
+<!-- Config Editor Modal -->
+<div class="modal fade" id="configModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="configModalLabel">Config Editor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <!-- Toolbar -->
+            <div
+                class="modal-body p-0 border-bottom border-secondary bg-darker d-flex justify-content-between align-items-center px-3 py-2">
+                <div class="d-flex align-items-center">
+                    <small class="text-muted me-3"><i class="bi bi-file-earmark-code"></i>
+                        docker-compose.yml</small>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="editorCopy()"><i
+                            class="bi bi-clipboard"></i> Copy</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="editorPaste()"><i
+                            class="bi bi-clipboard-plus"></i> Paste</button>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-warning" id="btn-lock-modal" onclick="unlockConfig()"><i
+                            class="bi bi-lock-fill"></i> Unlock</button>
+                    <button class="btn btn-sm btn-primary d-none" id="btn-save-modal" onclick="saveConfig()"><i
+                            class="bi bi-save"></i> Save</button>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <textarea class="form-control font-monospace border-0 rounded-0" id="editor-modal" rows="20"
+                    style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em; resize: none;"
+                    readonly></textarea>
+            </div>
+            <div class="modal-footer border-secondary p-2 justify-content-between">
+                <div id="editor-msg-modal" class="text-danger small ms-2"></div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Enter Password</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="password" id="unlock-password" class="form-control" placeholder="Password">
+                <div id="password-error" class="text-danger small mt-2"></div>
+            </div>
+            <div class="modal-footer border-secondary p-1">
+                <button type="button" class="btn btn-sm btn-primary w-100" onclick="checkPassword()">Unlock</button>
+            </div>
+        </div>
+    </div>
+</div>

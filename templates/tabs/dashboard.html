@@ -1,0 +1,119 @@
+<div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
+    <h4 class="mb-3 text-warning"><i class="bi bi-memory"></i> System Metrics</h4>
+    <!-- System Stats ROW -->
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-cpu"></i> CPU
+                            Usage</h6>
+                        <span class="badge bg-dark border border-secondary text-muted" id="avg-cpu">Avg:
+                            --</span>
+                    </div>
+                    <h5 class="fw-bold" id="cpu-val">0%</h5>
+                    <div class="progress mb-3" style="height: 5px;">
+                        <div class="progress-bar bg-info" id="cpu-bar" style="width: 0%"></div>
+                    </div>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="hist-cpu"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-memory"></i>
+                            RAM Usage</h6>
+                        <span class="badge bg-dark border border-secondary text-muted" id="avg-ram">Avg:
+                            --</span>
+                    </div>
+                    <h5 class=" fw-bold" id="ram-val">0%</h5>
+                    <div class="progress mb-3" style="height: 5px;">
+                        <div class="progress-bar bg-warning" id="ram-bar" style="width: 0%"></div>
+                    </div>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="hist-ram"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-hdd"></i> Disk
+                            Usage</h6>
+                        <span class="badge bg-dark border border-secondary text-muted" id="avg-disk">Avg:
+                            --</span>
+                    </div>
+                    <h5 class="fw-bold" id="disk-val">0%</h5>
+                    <div class="progress mb-3" style="height: 5px;">
+                        <div class="progress-bar bg-danger" id="disk-bar" style="width: 0%"></div>
+                    </div>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="hist-disk"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-3 mt-3">
+        <div class="col-md-3">
+            <div class="card p-3">
+                <label>Network Sent/Recv</label>
+                <div class="d-flex justify-content-between mt-1">
+                    <small class="text-muted">Down: <span id="net-in">0</span> KB/s</small>
+                    <small class="text-muted">Up: <span id="net-out">0</span> KB/s</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RabbitMQ Stats -->
+    <div class="d-flex align-items-center mb-3 mt-4">
+        <h4 class="text-warning mb-0 me-3"><i class="bi bi-envelope-paper"></i> RabbitMQ Metrics</h4>
+        <span id="mq-status" class="badge bg-secondary">Unknown</span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted text-uppercase mb-2">Bundles Queued</h6>
+                    <h5 class="fw-bold text-light" id="mq-queued">0</h5>
+                    <small class="text-muted d-block mb-3">Messages Ready</small>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="chart-queued"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted text-uppercase mb-2">Processed Total</h6>
+                    <h5 class="fw-bold text-light" id="mq-total">0</h5>
+                    <small class="text-muted d-block mb-3">All Time</small>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="chart-total"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted text-uppercase mb-2">Exchange Rate</h6>
+                    <div class="d-flex justify-content-between">
+                        <h5 class="fw-bold text-success mb-0" id="mq-rate-in">0.0</h5>
+                        <h5 class="fw-bold text-info mb-0" id="mq-rate-out">0.0</h5>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 small text-muted">
+                        <span>In /s</span>
+                        <span>Out /s</span>
+                    </div>
+                    <!-- Chart -->
+                    <div style="height: 150px;"><canvas id="chart-rate"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
