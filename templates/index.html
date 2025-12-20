@@ -406,15 +406,25 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { display: false }, // timestamp hidden for clean look
-                y: { display: true, beginAtZero: true, max: 100 }
+                x: {
+                    display: true,
+                    ticks: { color: '#6c757d', maxTicksLimit: 6 },
+                    grid: { color: '#2c3034' }
+                },
+                y: {
+                    display: true,
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#6c757d' },
+                    grid: { color: '#2c3034' }
+                }
             },
-            elements: { point: { radius: 0 } }
+            elements: { point: { radius: 1, backgroundColor: '#fff', hitRadius: 10 } }
         };
 
         const createHistChart = (id, color) => new Chart(document.getElementById(id).getContext('2d'), {
             type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 1, fill: true, backgroundColor: color + '20' }] },
+            data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 2, fill: true, backgroundColor: color + '20' }] },
             options: histOptions
         });
 
@@ -422,12 +432,21 @@
         const histRam = createHistChart('hist-ram', '#ffc107');
         const histDisk = createHistChart('hist-disk', '#dc3545');
 
+        function calculateAverage(data) {
+            if (!data || data.length === 0) return 0;
+            const sum = data.reduce((a, b) => a + b, 0);
+            return (sum / data.length).toFixed(1);
+        }
+
         function loadHistory() {
             fetch('/api/stats/history')
                 .then(r => r.json())
                 .then(d => {
                     const data = d.data || [];
-                    const labels = data.map(p => new Date(p.timestamp).toLocaleTimeString());
+                    const labels = data.map(p => {
+                        const d = new Date(p.timestamp);
+                        return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                    });
                     const cpuData = data.map(p => p.cpu);
                     const ramData = data.map(p => p.ram);
                     const diskData = data.map(p => p.disk);
@@ -436,14 +455,17 @@
                     histCpu.data.labels = labels;
                     histCpu.data.datasets[0].data = cpuData;
                     histCpu.update();
+                    document.getElementById('avg-cpu').innerText = `Avg: ${calculateAverage(cpuData)}%`;
 
                     histRam.data.labels = labels;
                     histRam.data.datasets[0].data = ramData;
                     histRam.update();
+                    document.getElementById('avg-ram').innerText = `Avg: ${calculateAverage(ramData)}%`;
 
                     histDisk.data.labels = labels;
                     histDisk.data.datasets[0].data = diskData;
                     histDisk.update();
+                    document.getElementById('avg-disk').innerText = `Avg: ${calculateAverage(diskData)}%`;
                 });
         }
         // Load on startup
