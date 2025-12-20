@@ -319,6 +319,47 @@
 
     </div>
 
+    <!-- Config Editor Modal -->
+    <div class="modal fade" id="configModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="configModalLabel">Config Editor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <!-- Toolbar -->
+                <div
+                    class="modal-body p-0 border-bottom border-secondary bg-darker d-flex justify-content-between align-items-center px-3 py-2">
+                    <div class="d-flex align-items-center">
+                        <small class="text-muted me-3"><i class="bi bi-file-earmark-code"></i>
+                            docker-compose.yml</small>
+                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="editorCopy()"><i
+                                class="bi bi-clipboard"></i> Copy</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editorPaste()"><i
+                                class="bi bi-clipboard-plus"></i> Paste</button>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-warning" id="btn-lock-modal" onclick="unlockConfig()"><i
+                                class="bi bi-lock-fill"></i> Unlock</button>
+                        <button class="btn btn-sm btn-primary d-none" id="btn-save-modal" onclick="saveConfig()"><i
+                                class="bi bi-save"></i> Save</button>
+                    </div>
+                </div>
+                <div class="modal-body p-0">
+                    <textarea class="form-control font-monospace border-0 rounded-0" id="editor-modal" rows="20"
+                        style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em; resize: none;"
+                        readonly></textarea>
+                </div>
+                <div class="modal-footer border-secondary p-2 justify-content-between">
+                    <div id="editor-msg-modal" class="text-danger small ms-2"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Password Modal -->
     <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -641,40 +682,98 @@
                 target_name: targetName
             });
         }
-        let currentUnlockIndex = null;
+        }
+        let currentUnlockIndex = null; // Unused in new logic but kept if reference exists, or remove.
+        let currentEditingName = null;
+        let currentEditingUid = null;
+
         const passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+        const configModal = new bootstrap.Modal(document.getElementById('configModal'));
 
-        function loadConfig(name, index) {
-            const arrow = document.getElementById(`arrow-${index}`);
-            if (arrow.classList.contains('bi-chevron-right')) {
-                arrow.classList.remove('bi-chevron-right');
-                arrow.classList.add('bi-chevron-down');
+        function openEditor(name, uid) {
+            currentEditingName = name;
+            currentEditingUid = uid;
 
-                // Fetch config
-                fetch(`/api/connector/${name}/config`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.content) {
-                            document.getElementById(`editor-${index}`).value = data.content;
-                        } else {
-                            document.getElementById(`editor-${index}`).value = '// Error loading file';
-                        }
-                    });
-            } else {
-                arrow.classList.remove('bi-chevron-down');
-                arrow.classList.add('bi-chevron-right');
+            // Reset UI
+            const editor = document.getElementById('editor-modal');
+            const msgEl = document.getElementById('editor-msg-modal');
+            const btnLock = document.getElementById('btn-lock-modal');
+            const btnSave = document.getElementById('btn-save-modal');
+
+            editor.value = 'Loading...';
+            editor.readOnly = true;
+            editor.style.borderColor = '';
+            msgEl.innerText = '';
+
+            btnLock.classList.remove('d-none');
+            btnSave.classList.add('d-none');
+            document.getElementById('configModalLabel').innerText = `Config Editor: ${name}`;
+
+            configModal.show();
+
+            // Fetch config
+            fetch(`/api/connector/${name}/config`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.content) {
+                        editor.value = data.content;
+                    } else {
+                        editor.value = '// Error loading file: ' + (data.error || 'Unknown');
+                    }
+                })
+                .catch(err => {
+                    editor.value = '// Network Error';
+                });
+        }
+
+        // Copy/Paste Helpers
+        function editorCopy() {
+            const editor = document.getElementById('editor-modal');
+            editor.select();
+            document.execCommand('copy'); // Fallback for older browsers / non-secure contexts
+            // Or navigator.clipboard.writeText(editor.value);
+            // Deselect
+            window.getSelection().removeAllRanges();
+
+            // Feedback
+            const msg = document.getElementById('editor-msg-modal');
+            const original = msg.innerText;
+            msg.className = 'text-success small ms-2';
+            msg.innerText = 'Copied to clipboard!';
+            setTimeout(() => { msg.innerText = ''; }, 2000);
+        }
+
+        async function editorPaste() {
+            const editor = document.getElementById('editor-modal');
+            if (editor.readOnly) {
+                alert('Unlock the editor first!');
+                return;
+            }
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    // Insert at cursor
+                    const start = editor.selectionStart;
+                    const end = editor.selectionEnd;
+                    const val = editor.value;
+                    editor.value = val.substring(0, start) + text + val.substring(end);
+                    editor.selectionStart = editor.selectionEnd = start + text.length;
+                }
+            } catch (err) {
+                // Fallback for non-https?
+                alert('Paste failed: Browser may block clipboard access in this context. Use Ctrl+V.');
             }
         }
 
-        function unlockConfig(index, name) {
+        function unlockConfig() {
             // Check if Stopped
-            const statusBadge = document.getElementById(`status-connector_${name}`);
+            const statusBadge = document.getElementById(`status-connector_${currentEditingName}`);
             if (statusBadge && statusBadge.innerText.toLowerCase() === 'running') {
                 alert('You must STOP the connector before editing the configuration.');
                 return;
             }
 
-            currentUnlockIndex = index;
+            // Show password modal
             document.getElementById('unlock-password').value = '';
             document.getElementById('password-error').innerText = '';
             passwordModal.show();
@@ -685,25 +784,26 @@
             if (pwd === 'P@ssw0rd') {
                 passwordModal.hide();
                 // Enable Editor
-                const index = currentUnlockIndex;
-                const editor = document.getElementById(`editor-${index}`);
+                const editor = document.getElementById('editor-modal');
                 editor.readOnly = false;
-                editor.style.borderColor = '#ffc107'; // Yellow border to indicate edit mode
+                editor.style.borderColor = '#ffc107'; // Yellow border
 
                 // Toggle Buttons
-                document.getElementById(`btn-lock-${index}`).classList.add('d-none');
-                document.getElementById(`btn-save-${index}`).classList.remove('d-none');
+                document.getElementById('btn-lock-modal').classList.add('d-none');
+                document.getElementById('btn-save-modal').classList.remove('d-none');
 
             } else {
                 document.getElementById('password-error').innerText = 'Incorrect password.';
             }
         }
 
-        function saveConfig(name, index) {
-            const content = document.getElementById(`editor-${index}`).value;
-            const msgEl = document.getElementById(`editor-msg-${index}`);
+        function saveConfig() {
+            const content = document.getElementById('editor-modal').value;
+            const msgEl = document.getElementById('editor-msg-modal');
+            const name = currentEditingName;
 
             msgEl.innerText = 'Saving...';
+            msgEl.className = 'text-warning small ms-2';
 
             fetch(`/api/connector/${name}/config`, {
                 method: 'POST',
@@ -713,22 +813,23 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        msgEl.className = 'text-success small';
-                        msgEl.innerText = `Saved! Backup created: ${data.backup}`;
+                        msgEl.className = 'text-success small ms-2';
+                        msgEl.innerText = `Saved! Backup: ${data.backup}`;
 
-                        // Reset UI
-                        document.getElementById(`editor-${index}`).readOnly = true;
-                        document.getElementById(`editor-${index}`).style.borderColor = '';
-                        document.getElementById(`btn-lock-${index}`).classList.remove('d-none');
-                        document.getElementById(`btn-save-${index}`).classList.add('d-none');
-                        document.getElementById(`btn-lock-${index}`).innerHTML = '<i class="bi bi-lock-fill"></i> Unlock'; // Reset text if needed
+                        // Reset UI Locked
+                        const editor = document.getElementById('editor-modal');
+                        editor.readOnly = true;
+                        editor.style.borderColor = '';
+                        document.getElementById('btn-lock-modal').classList.remove('d-none');
+                        document.getElementById('btn-save-modal').classList.add('d-none');
+
                     } else {
-                        msgEl.className = 'text-danger small';
+                        msgEl.className = 'text-danger small ms-2';
                         msgEl.innerText = data.error || 'Save failed';
                     }
                 })
                 .catch(err => {
-                    msgEl.className = 'text-danger small';
+                    msgEl.className = 'text-danger small ms-2';
                     msgEl.innerText = 'Network error during save';
                 });
         }
@@ -833,30 +934,14 @@
                 <div class="card border-secondary">
                     <div class="card-body d-flex justify-content-between align-items-center py-2">
                         <div class="d-flex align-items-center">
-                            <button class="btn btn-sm btn-link text-light text-decoration-none p-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig${uid}" aria-expanded="false" aria-controls="collapseConfig${uid}" onclick="loadConfig('${name}', '${uid}')">
-                                <i class="bi bi-chevron-right" id="arrow-${uid}"></i>
-                            </button>
                             <i class="bi bi-plug-fill text-info me-2"></i> 
                             <strong>${name}</strong>
                             <span id="status-connector_${name}" class="badge bg-secondary ms-2" style="font-size: 0.7em;">Checking...</span>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-outline-primary me-1" onclick="sendAction('connector', 'up', '${name}')">Start</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="sendAction('connector', 'down', '${name}')">Stop</button>
-                        </div>
-                    </div>
-                    <!-- Config Editor Accordion -->
-                    <div class="collapse" id="collapseConfig${uid}">
-                        <div class="card-footer border-secondary bg-darker">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <small class="text-muted"><i class="bi bi-file-earmark-code"></i> docker-compose.yml</small>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-warning" id="btn-lock-${uid}" onclick="unlockConfig('${uid}', '${name}')"><i class="bi bi-lock-fill"></i> Unlock</button>
-                                    <button class="btn btn-sm btn-primary d-none" id="btn-save-${uid}" onclick="saveConfig('${name}', '${uid}')"><i class="bi bi-save"></i> Save</button>
-                                </div>
-                            </div>
-                            <textarea class="form-control font-monospace mb-2" id="editor-${uid}" rows="10" style="background-color: #0d1117; color: #c9d1d9; font-size: 0.85em;" readonly></textarea>
-                            <div id="editor-msg-${uid}" class="text-danger small"></div>
+                            <button class="btn btn-sm btn-outline-danger me-1" onclick="sendAction('connector', 'down', '${name}')">Stop</button>
+                            <button class="btn btn-sm btn-outline-light" onclick="openEditor('${name}', '${uid}')"><i class="bi bi-pencil-square"></i> Edit</button>
                         </div>
                     </div>
                 </div>
