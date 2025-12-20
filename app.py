@@ -40,8 +40,10 @@ CONNECTORS_DIR = os.path.join(OPENCTI_DIR, 'connectors')
 def get_system_stats():
     """Collects system metrics (CPU, RAM, Disk, Network)."""
     try:
+    try:
         net1 = psutil.net_io_counters()
-        time.sleep(0.1) 
+        # Use cpu_percent with interval to block for 0.1s, serving double duty for net stats delay
+        cpu_usage = psutil.cpu_percent(interval=0.1)
         net2 = psutil.net_io_counters()
         
         # Bytes per second (approximation over small window)
@@ -52,7 +54,7 @@ def get_system_stats():
         disk = psutil.disk_usage('/')
 
         return {
-            'cpu': psutil.cpu_percent(interval=None),
+            'cpu': cpu_usage,
             'ram': mem.percent,
             'ram_used': mem.used / (1024**3), # GB
             'ram_total': mem.total / (1024**3), # GB
