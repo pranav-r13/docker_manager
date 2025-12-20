@@ -352,61 +352,54 @@
         };
 
         // --- Chart.js Setup ---
-        const chartConfig = (color) => ({
-            type: 'line',
-            data: {
-                labels: Array(20).fill(''),
-                datasets: [{
-                    data: Array(20).fill(null),
-                    borderColor: color,
+        // RabbitMQ Charts (Reuse histOptions style but mostly empty initial data)
+        const mqOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    display: true,
+                    ticks: { color: '#6c757d', maxTicksLimit: 6 },
+                    grid: { color: '#2c3034' }
+                },
+                y: {
+                    display: true,
+                    beginAtZero: true,
+                    ticks: { color: '#6c757d' },
+                    grid: { color: '#2c3034' }
+                }
+            },
+            elements: { point: { radius: 1, backgroundColor: '#fff', hitRadius: 10 } }
+        };
+
+        const createMqChart = (id, color1, color2 = null) => {
+            const datasets = [{
+                data: [],
+                borderColor: color1,
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: color1 + '20'
+            }];
+            if (color2) {
+                datasets.push({
+                    data: [],
+                    borderColor: color2,
                     borderWidth: 2,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { display: false },
-                    y: { display: false, beginAtZero: true }
-                },
-                animation: false
+                    fill: true,
+                    backgroundColor: color2 + '20'
+                });
             }
-        });
+            return new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'line',
+                data: { labels: [], datasets: datasets },
+                options: mqOptions
+            });
+        };
 
-        const multiChartConfig = (color1, color2) => ({
-            type: 'line',
-            data: {
-                labels: Array(20).fill(''),
-                datasets: [
-                    { data: Array(20).fill(null), borderColor: color1, borderWidth: 2, tension: 0.4, pointRadius: 0 },
-                    { data: Array(20).fill(null), borderColor: color2, borderWidth: 2, tension: 0.4, pointRadius: 0 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { display: false },
-                    y: { display: false, beginAtZero: true }
-                },
-                animation: false
-            }
-        });
-
-        // Initialize Charts
-        const ctxQueued = document.getElementById('chart-queued').getContext('2d');
-        const chartQueued = new Chart(ctxQueued, chartConfig('#d1d5db')); // Light Grey
-
-        const ctxTotal = document.getElementById('chart-total').getContext('2d');
-        const chartTotal = new Chart(ctxTotal, chartConfig('#ffc107')); // Warning/Yellow
-
-        const ctxRate = document.getElementById('chart-rate').getContext('2d');
-        const chartRate = new Chart(ctxRate, multiChartConfig('#198754', '#0dcaf0')); // Success(Green) and Info(Blue)
+        const chartQueued = createMqChart('chart-queued', '#fd7e14'); // Orange
+        const chartTotal = createMqChart('chart-total', '#6f42c1'); // Purple
+        const chartRate = createMqChart('chart-rate', '#198754', '#0dcaf0'); // Green & Blue
 
         // History Charts
         const histOptions = {
@@ -474,6 +467,28 @@
                     histDisk.data.datasets[0].data = diskData;
                     histDisk.update();
                     document.getElementById('avg-disk').innerText = `Avg: ${calculateAverage(diskData)}%`;
+
+                    // RabbitMQ History
+                    const mqQueued = data.map(p => p.mq_queued || 0);
+                    const mqTotal = data.map(p => p.mq_total || 0);
+                    const mqRateIn = data.map(p => p.mq_rate_in || 0);
+                    const mqRateOut = data.map(p => p.mq_rate_out || 0);
+
+                    chartQueued.data.labels = labels;
+                    chartQueued.data.datasets[0].data = mqQueued;
+                    chartQueued.update();
+
+                    chartTotal.data.labels = labels;
+                    chartTotal.data.datasets[0].data = mqTotal;
+                    chartTotal.update();
+
+                    chartRate.data.labels = labels;
+                    chartRate.data.datasets[0].data = mqRateIn;
+                    // Check if second dataset exists (it should)
+                    if (chartRate.data.datasets.length > 1) {
+                        chartRate.data.datasets[1].data = mqRateOut;
+                    }
+                    chartRate.update();
                 });
         }
         // Load on startup

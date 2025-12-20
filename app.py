@@ -293,9 +293,6 @@ def save_connector_config(name):
     except Exception as e:
         return {'error': str(e)}, 500
 
-    except Exception as e:
-        return {'error': str(e)}, 500
-
 def load_history():
     """Lengths history from file, handling errors/empty file."""
     if not os.path.exists(HISTORY_FILE):
@@ -314,7 +311,12 @@ def save_history_point(stats):
         'timestamp': datetime.now().isoformat(),
         'cpu': stats.get('cpu', 0),
         'ram': stats.get('ram', 0),
-        'disk': stats.get('disk', 0)
+        'disk': stats.get('disk', 0),
+        # RabbitMQ Stats
+        'mq_queued': stats.get('rabbitmq', {}).get('messages_ready', 0) if stats.get('rabbitmq') else 0,
+        'mq_total': stats.get('rabbitmq', {}).get('messages_total', 0) if stats.get('rabbitmq') else 0,
+        'mq_rate_in': stats.get('rabbitmq', {}).get('publish_rate', 0) if stats.get('rabbitmq') else 0,
+        'mq_rate_out': stats.get('rabbitmq', {}).get('deliver_rate', 0) if stats.get('rabbitmq') else 0
     }
     history.append(point)
     
