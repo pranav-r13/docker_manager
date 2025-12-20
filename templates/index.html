@@ -491,14 +491,14 @@
         // Connection Status
         socket.on('connect', () => {
             const el = document.getElementById('connection-status');
-            el.className = 'badge bg-success';
+            el.className = 'btn btn-outline-success btn-sm';
             el.innerHTML = statusBadges.connected;
             logToTerminal('System: Client connected to server.');
         });
 
         socket.on('disconnect', () => {
             const el = document.getElementById('connection-status');
-            el.className = 'badge bg-danger';
+            el.className = 'btn btn-outline-warning btn-sm';
             el.innerHTML = statusBadges.disconnected;
             logToTerminal('System: Connection lost.');
         });
