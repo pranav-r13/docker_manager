@@ -1,9 +1,11 @@
 import os
 import time
+import json
 import argparse
 import threading
 import subprocess
 import psutil
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
@@ -17,6 +19,10 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 # RabbitMQ Defaults
 RABBITMQ_URL = "http://192.168.0.205:15672/api/overview"
 RABBITMQ_AUTH = ('admin', 'Admin@123')
+
+# History Persistence
+HISTORY_FILE = 'stats_history.json'
+MAX_HISTORY_POINTS = 288 # 24 hours * 12 points/hour (5 min interval)
 
 # Global background thread control
 monitor_thread = None
@@ -193,9 +199,23 @@ def background_monitor():
             container_list = get_running_containers()
             socketio.emit('container_list', container_list)
             
+        if tick % 2 == 0:
+            status_update = get_docker_status_update()
+            socketio.emit('status_update', status_update)
+            
+            container_list = get_running_containers()
+            socketio.emit('container_list', container_list)
+            
             # 3. Known Connectors list (Dynamic Discovery)
             connector_list = scan_connectors()
             socketio.emit('known_connectors', connector_list)
+
+        # 4. History Recording (Every 300s = 5 mins -> Every 150 ticks @ 2s each)
+        if tick % 150 == 0:
+            # Re-fetch fresh stats to ensure accuracy or just reuse 'stats' from above
+            # Using 'stats' from line 159 is fine
+            if 'stats' in locals():
+                save_history_point(stats)
         
         tick += 1
         socketio.sleep(2)
@@ -285,6 +305,46 @@ def save_connector_config(name):
         
     except Exception as e:
         return {'error': str(e)}, 500
+
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+def load_history():
+    """Lengths history from file, handling errors/empty file."""
+    if not os.path.exists(HISTORY_FILE):
+        return []
+    try:
+        with open(HISTORY_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_history_point(stats):
+    """Appends a new point and trims old ones."""
+    history = load_history()
+    
+    point = {
+        'timestamp': datetime.now().isoformat(),
+        'cpu': stats.get('cpu', 0),
+        'ram': stats.get('ram', 0),
+        'disk': stats.get('disk', 0)
+    }
+    history.append(point)
+    
+    # Prune (Keep last 24h)
+    if len(history) > MAX_HISTORY_POINTS:
+        history = history[-MAX_HISTORY_POINTS:]
+        
+    try:
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(history, f)
+    except Exception as e:
+        print(f"Error saving history: {e}")
+
+@app.route('/api/stats/history', methods=['GET'])
+def get_stats_history():
+    """Returns the historical data."""
+    return {'data': load_history()}
 
 def execute_docker_command(command, cwd):
     """

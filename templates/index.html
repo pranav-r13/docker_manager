@@ -109,35 +109,73 @@
 
             <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
                 <h4 class="mb-3 text-warning"><i class="bi bi-memory"></i> System Metrics</h4>
-                <!-- System Stats -->
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <div class="card p-3">
-                            <label>CPU Usage <span id="cpu-val" class="float-end">0%</span></label>
-                            <div class="progress mt-2" style="height: 10px;">
-                                <div id="cpu-bar" class="progress-bar bg-danger" role="progressbar" style="width: 0%">
+                <!-- System Stats ROW -->
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-cpu"></i> CPU
+                                    Usage</h6>
+                                <h3 class="display-6 fw-bold" id="cpu-val">0%</h3>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-info" id="cpu-bar" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card p-3">
-                            <label>RAM Usage <span id="ram-val" class="float-end">0%</span></label>
-                            <div class="progress mt-2" style="height: 10px;">
-                                <div id="ram-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%">
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-memory"></i> RAM
+                                    Usage</h6>
+                                <h3 class="display-6 fw-bold" id="ram-val">0%</h3>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-warning" id="ram-bar" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card p-3">
-                            <label>Disk Usage <span id="disk-val" class="float-end">0%</span></label>
-                            <div class="progress mt-2" style="height: 10px;">
-                                <div id="disk-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%">
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-hdd"></i> Disk
+                                    Usage</h6>
+                                <h3 class="display-6 fw-bold" id="disk-val">0%</h3>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-danger" id="disk-bar" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- 24H History Row -->
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-header border-secondary text-uppercase fw-bold text-muted">
+                                <i class="bi bi-graph-up"></i> 24-Hour Trends
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6 class="text-center small text-muted">CPU</h6>
+                                        <div style="height: 150px;"><canvas id="hist-cpu"></canvas></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-center small text-muted">RAM</h6>
+                                        <div style="height: 150px;"><canvas id="hist-ram"></canvas></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-center small text-muted">Disk</h6>
+                                        <div style="height: 150px;"><canvas id="hist-disk"></canvas></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3 mt-3">
                     <div class="col-md-3">
                         <div class="card p-3">
                             <label>Network Sent/Recv</label>
@@ -361,6 +399,57 @@
 
         const ctxRate = document.getElementById('chart-rate').getContext('2d');
         const chartRate = new Chart(ctxRate, multiChartConfig('#198754', '#0dcaf0')); // Success(Green) and Info(Blue)
+
+        // History Charts
+        const histOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false }, // timestamp hidden for clean look
+                y: { display: true, beginAtZero: true, max: 100 }
+            },
+            elements: { point: { radius: 0 } }
+        };
+
+        const createHistChart = (id, color) => new Chart(document.getElementById(id).getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 1, fill: true, backgroundColor: color + '20' }] },
+            options: histOptions
+        });
+
+        const histCpu = createHistChart('hist-cpu', '#0dcaf0');
+        const histRam = createHistChart('hist-ram', '#ffc107');
+        const histDisk = createHistChart('hist-disk', '#dc3545');
+
+        function loadHistory() {
+            fetch('/api/stats/history')
+                .then(r => r.json())
+                .then(d => {
+                    const data = d.data || [];
+                    const labels = data.map(p => new Date(p.timestamp).toLocaleTimeString());
+                    const cpuData = data.map(p => p.cpu);
+                    const ramData = data.map(p => p.ram);
+                    const diskData = data.map(p => p.disk);
+
+                    // Update Charts
+                    histCpu.data.labels = labels;
+                    histCpu.data.datasets[0].data = cpuData;
+                    histCpu.update();
+
+                    histRam.data.labels = labels;
+                    histRam.data.datasets[0].data = ramData;
+                    histRam.update();
+
+                    histDisk.data.labels = labels;
+                    histDisk.data.datasets[0].data = diskData;
+                    histDisk.update();
+                });
+        }
+        // Load on startup
+        loadHistory();
+        // Reload every 5 mins (approx)
+        setInterval(loadHistory, 300000);
 
         function updateChart(chart, val1, val2 = null) {
             // Shift data
