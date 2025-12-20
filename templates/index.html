@@ -110,67 +110,59 @@
             <div class="tab-pane fade show active" id="dashboard-pane" role="tabpanel">
                 <h4 class="mb-3 text-warning"><i class="bi bi-memory"></i> System Metrics</h4>
                 <!-- System Stats ROW -->
+                <!-- System Stats ROW -->
                 <div class="row g-3">
                     <div class="col-md-4">
                         <div class="card bg-dark border-secondary h-100">
                             <div class="card-body">
-                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-cpu"></i> CPU
-                                    Usage</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-cpu"></i> CPU
+                                        Usage</h6>
+                                    <span class="badge bg-dark border border-secondary text-muted" id="avg-cpu">Avg:
+                                        --</span>
+                                </div>
                                 <h5 class="display-6 fw-bold" id="cpu-val">0%</h5>
-                                <div class="progress" style="height: 5px;">
+                                <div class="progress mb-3" style="height: 5px;">
                                     <div class="progress-bar bg-info" id="cpu-bar" style="width: 0%"></div>
                                 </div>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="hist-cpu"></canvas></div>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card bg-dark border-secondary h-100">
                             <div class="card-body">
-                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-memory"></i> RAM
-                                    Usage</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-memory"></i>
+                                        RAM Usage</h6>
+                                    <span class="badge bg-dark border border-secondary text-muted" id="avg-ram">Avg:
+                                        --</span>
+                                </div>
                                 <h5 class="display-6 fw-bold" id="ram-val">0%</h5>
-                                <div class="progress" style="height: 5px;">
+                                <div class="progress mb-3" style="height: 5px;">
                                     <div class="progress-bar bg-warning" id="ram-bar" style="width: 0%"></div>
                                 </div>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="hist-ram"></canvas></div>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card bg-dark border-secondary h-100">
                             <div class="card-body">
-                                <h6 class="card-title text-muted text-uppercase mb-2"><i class="bi bi-hdd"></i> Disk
-                                    Usage</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="card-title text-muted text-uppercase m-0"><i class="bi bi-hdd"></i> Disk
+                                        Usage</h6>
+                                    <span class="badge bg-dark border border-secondary text-muted" id="avg-disk">Avg:
+                                        --</span>
+                                </div>
                                 <h5 class="display-6 fw-bold" id="disk-val">0%</h5>
-                                <div class="progress" style="height: 5px;">
+                                <div class="progress mb-3" style="height: 5px;">
                                     <div class="progress-bar bg-danger" id="disk-bar" style="width: 0%"></div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 24H History Row -->
-                <div class="row g-3 mt-1">
-                    <div class="col-12">
-                        <div class="card bg-dark border-secondary">
-                            <div class="card-header border-secondary text-uppercase fw-bold text-muted">
-                                <i class="bi bi-graph-up"></i> 24-Hour Trends
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <h6 class="text-center small text-muted">CPU</h6>
-                                        <div style="height: 150px;"><canvas id="hist-cpu"></canvas></div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-center small text-muted">RAM</h6>
-                                        <div style="height: 150px;"><canvas id="hist-ram"></canvas></div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-center small text-muted">Disk</h6>
-                                        <div style="height: 150px;"><canvas id="hist-disk"></canvas></div>
-                                    </div>
-                                </div>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="hist-disk"></canvas></div>
                             </div>
                         </div>
                     </div>
