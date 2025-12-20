@@ -193,20 +193,6 @@ def background_monitor():
             print(f"Stats Error: {e}")
 
         # 2. Docker Status & Container List (Every 4s -> every 2nd tick)
-        if tick % 2 == 0:
-            status_update = get_docker_status_update()
-            socketio.emit('status_update', status_update)
-            
-            container_list = get_running_containers()
-            socketio.emit('container_list', container_list)
-            
-        if tick % 2 == 0:
-            status_update = get_docker_status_update()
-            socketio.emit('status_update', status_update)
-            
-            container_list = get_running_containers()
-            socketio.emit('container_list', container_list)
-            
             # 3. Known Connectors list (Dynamic Discovery)
             connector_list = scan_connectors()
             socketio.emit('known_connectors', connector_list)

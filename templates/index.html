@@ -190,48 +190,48 @@
                 </div>
 
                 <!-- RabbitMQ Stats -->
-                <h4 class="mb-3 text-warning"><i class="bi bi-envelope-paper"></i> RabbitMQ Metrics</h4>
-                <p class="text-muted mb-2">Status</p>
-                <h3 id="mq-status" class="mb-0"><span class="badge bg-secondary">Unknown</span></h3>
+                <div class="d-flex align-items-center mb-3 mt-4">
+                    <h4 class="text-warning mb-0 me-3"><i class="bi bi-envelope-paper"></i> RabbitMQ Metrics</h4>
+                    <span id="mq-status" class="badge bg-secondary">Unknown</span>
+                </div>
 
-                <div class="row mb-3">
-                    <!-- <div class="col-md-3">
-                        <div class="card p-3 text-center">
-                            <h6 class="text-muted mb-2">Status</h6>
-                            <h3 id="mq-status" class="mb-0"><span class="badge bg-secondary">Unknown</span></h3>
-                        </div>
-                    </div> -->
-
-
-                    <div class="col-md-3">
-                        <div class="card p-3 text-center">
-                            <h6 class="text-muted mb-2">Bundles Queueud</h6>
-                            <h3 id="mq-queued" class="text-light mb-0">0</h3>
-                            <small class="text-muted">Messages Ready</small>
-                            <div style="height: 60px; width: 100%; margin-top: 10px;">
-                                <canvas id="chart-queued"></canvas>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2">Bundles Queued</h6>
+                                <h5 class="fw-bold text-light" id="mq-queued">0</h5>
+                                <small class="text-muted d-block mb-3">Messages Ready</small>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="chart-queued"></canvas></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card p-3 text-center">
-                            <h6 class="text-muted mb-2">Bundles Processed/Total</h6>
-                            <h3 id="mq-total" class="text-light mb-0">0</h3>
-                            <small class="text-muted">Total Messages</small>
-                            <div style="height: 60px; width: 100%; margin-top: 10px;">
-                                <canvas id="chart-total"></canvas>
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2">Processed Total</h6>
+                                <h5 class="fw-bold text-light" id="mq-total">0</h5>
+                                <small class="text-muted d-block mb-3">All Time</small>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="chart-total"></canvas></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card p-3 text-center">
-                            <h6 class="text-muted mb-2">Rate (In / Out)</h6>
-                            <div class="mb-0">
-                                <div><span class="text-success" id="mq-rate-in">0.0</span> <small>/s In</small></div>
-                                <div><span class="text-info" id="mq-rate-out">0.0</span> <small>/s Out</small></div>
-                            </div>
-                            <div style="height: 60px; width: 100%; margin-top: 10px;">
-                                <canvas id="chart-rate"></canvas>
+                    <div class="col-md-4">
+                        <div class="card bg-dark border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted text-uppercase mb-2">Exchange Rate</h6>
+                                <div class="d-flex justify-content-between">
+                                    <h5 class="fw-bold text-success mb-0" id="mq-rate-in">0.0</h5>
+                                    <h5 class="fw-bold text-info mb-0" id="mq-rate-out">0.0</h5>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3 small text-muted">
+                                    <span>In /s</span>
+                                    <span>Out /s</span>
+                                </div>
+                                <!-- Chart -->
+                                <div style="height: 150px;"><canvas id="chart-rate"></canvas></div>
                             </div>
                         </div>
                     </div>
@@ -482,15 +482,22 @@
         setInterval(loadHistory, 300000);
 
         function updateChart(chart, val1, val2 = null) {
-            // Shift data
-            chart.data.datasets[0].data.shift();
+            const now = new Date();
+            const timeLabel = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
+
+            // Limit history to 20 points
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(ds => ds.data.shift());
+            }
+
+            chart.data.labels.push(timeLabel);
             chart.data.datasets[0].data.push(val1);
 
             if (chart.data.datasets.length > 1 && val2 !== null) {
-                chart.data.datasets[1].data.shift();
                 chart.data.datasets[1].data.push(val2);
             }
-            chart.update();
+            chart.update('none'); // mode 'none' for performance
         }
         // ---------------------
 
@@ -535,7 +542,9 @@
                 const mqStatusEl = document.getElementById('mq-status');
 
                 if (mq.status === 'online') {
-                    mqStatusEl.innerHTML = '<span class="badge bg-success">Online</span>';
+                    mqStatusEl.className = 'badge bg-success';
+                    mqStatusEl.innerText = 'Online';
+
                     document.getElementById('mq-queued').innerText = mq.messages_ready.toLocaleString();
                     document.getElementById('mq-total').innerText = mq.messages_total.toLocaleString();
                     document.getElementById('mq-rate-in').innerText = mq.publish_rate.toFixed(1);
@@ -546,7 +555,8 @@
                     updateChart(chartTotal, mq.messages_total);
                     updateChart(chartRate, mq.publish_rate, mq.deliver_rate);
                 } else {
-                    mqStatusEl.innerHTML = `<span class="badge bg-danger">Offline (${mq.error || 'Err'})</span>`;
+                    mqStatusEl.className = 'badge bg-danger';
+                    mqStatusEl.innerText = `Offline (${mq.error || 'Err'})`;
                 }
             }
         });
