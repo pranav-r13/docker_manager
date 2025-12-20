@@ -263,7 +263,8 @@
 
                         <!-- Connectors -->
                         <h5 class="mt-4 mb-3">Connectors <button class="btn btn-sm btn-outline-info float-end"
-                                onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
+                                id="btn-refresh-connectors" onclick="refreshConnectors()"><i
+                                    class="bi bi-arrow-clockwise"></i> Refresh</button></h5>
                         <div class="row g-3" id="connectors-list">
                             <!-- Populated dynamically via Socket.IO -->
                             <div class="col-12 text-center text-muted p-3" id="connectors-loading">Scanning for
@@ -498,7 +499,7 @@
 
         socket.on('disconnect', () => {
             const el = document.getElementById('connection-status');
-            el.className = 'btn btn-outline-warning btn-sm';
+            el.className = 'btn btn-outline-danger btn-sm';
             el.innerHTML = statusBadges.disconnected;
             logToTerminal('System: Connection lost.');
         });
@@ -703,7 +704,32 @@
         }
 
         // --- Dynamic Connector Discovery ---
+        function refreshConnectors() {
+            const btn = document.getElementById('btn-refresh-connectors');
+            const icon = btn.querySelector('i');
+            icon.classList.add('spin-animation'); // We need to add CSS for this or use bootstrap class
+            // Bootstrap doesn't have spin class for generic icons usually, let's use a simple style or just 'fa-spin' if fontawesome was here, but it's bootstrap icons.
+            // Let's manually rotate or just disable button
+            btn.disabled = true;
+            icon.classList.remove('bi-arrow-clockwise');
+            icon.classList.add('bi-arrow-repeat'); // Swap icon for visual feedback if wanted, or just animate
+            // Simple animation via inline style or class
+            icon.style.animation = 'spin 1s linear infinite';
+
+            socket.emit('request_connectors');
+        }
+
         socket.on('known_connectors', (list) => {
+            // Stop Spinner
+            const btn = document.getElementById('btn-refresh-connectors');
+            if (btn) {
+                btn.disabled = false;
+                const icon = btn.querySelector('i');
+                icon.style.animation = ''; // Remove animation
+                icon.classList.remove('bi-arrow-repeat');
+                icon.classList.add('bi-arrow-clockwise');
+            }
+
             const container = document.getElementById('connectors-list');
             const loading = document.getElementById('connectors-loading');
             if (loading) loading.remove();
